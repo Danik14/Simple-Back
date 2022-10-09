@@ -1,10 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type application struct {
@@ -18,6 +22,7 @@ func main() {
 	// and some short help text explaining what the flag controls. The value of the
 	// flag will be stored in the addr variable at runtime.
 	addr := flag.String("addr", ":4000", "HTTP network address")
+	dsn := flag.String("dsn", "web:admin@/snippetbox?parseTime=true", "MySql data source name")
 
 	// Importantly, we use the flag.Parse() function to parse the command-line flag.
 	// This reads in the command-line flag value and assigns it to the addr
@@ -37,6 +42,13 @@ func main() {
 	// file name and line number.
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
+	db, err := openDB(*dsn)
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+
+	defer db.Close()
+
 	app := &application{
 		infoLog:  infoLog,
 		errorLog: errorLog,
@@ -50,6 +62,20 @@ func main() {
 	}
 
 	infoLog.Printf("Starting server on %s", *addr)
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	errorLog.Fatal(err)
+}
+
+func openDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	if err = db.Ping(); err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	return db, nil
 }
