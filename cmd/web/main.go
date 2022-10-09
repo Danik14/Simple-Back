@@ -7,6 +7,11 @@ import (
 	"os"
 )
 
+type application struct {
+	infoLog  *log.Logger
+	errorLog *log.Logger
+}
+
 func main() {
 
 	// Define a new command-line flag with the name 'addr', a default value of ":4000"
@@ -32,22 +37,16 @@ func main() {
 	// file name and line number.
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
-	fileServer := http.FileServer(http.Dir("./ui/static/"))
-
-	// Register the two new handler functions and corresponding URL patterns with
-	// the servemux, in exactly the same way that we did before.
-	mux := http.NewServeMux()
-	//for static files
-	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
-	mux.HandleFunc("/", home)
-	mux.HandleFunc("/snippet/view", snippetView)
-	mux.HandleFunc("/snippet/create", snippetCreate)
+	app := &application{
+		infoLog:  infoLog,
+		errorLog: errorLog,
+	}
 
 	// Initialize a new http.Server struct. We set the Addr and Handler fields so
 	// that the server uses the same network address and routes as before, and set
 	// the ErrorLog field so that the server now uses the custom errorLog logger in // the event of any problems.
 	server := &http.Server{
-		Addr: *addr, ErrorLog: errorLog, Handler: mux,
+		Addr: *addr, ErrorLog: errorLog, Handler: app.routes(),
 	}
 
 	infoLog.Printf("Starting server on %s", *addr)
