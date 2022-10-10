@@ -18,7 +18,24 @@ type SnippetModel struct {
 }
 
 func (m *SnippetModel) Insert(title string, content string, expires int) (int, error) {
-	return 0, nil
+	// ? marks for placeable data
+	statement := `INSERT INTO snippets (title, content, created, expires)
+	VALUES(?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY))`
+
+	// in this case I pass title, content, expires
+	// to replace ? marks in my statement
+	result, err := m.DB.Exec(statement, title, content, expires)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	//LastInsertId return int64, so converting it to int
+	return int(id), nil
 }
 
 func (m *SnippetModel) Get(id int) (*Snippet, error) {
