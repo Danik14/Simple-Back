@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
 	"strconv"
 
@@ -19,24 +18,34 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Initialize a slice containing the paths to the two files. It's important // to note that the file containing our base template must be the *first* // file in the slice.
-	files := []string{
-		"./ui/html/partials/nav.tmpl.html",
-		"./ui/html/base.tmpl.html",
-		"./ui/html/pages/home.tmpl.html"}
-
-	ts, err := template.ParseFiles(files...)
+	snippets, err := app.snippets.Latest()
 	if err != nil {
 		app.serverError(w, err)
-		http.Error(w, "Internal Server Error", 500)
 		return
 	}
-	// Use the ExecuteTemplate() method to write the content of the "base" // template as the response body.
-	err = ts.ExecuteTemplate(w, "base", nil)
-	if err != nil {
-		app.serverError(w, err)
-		http.Error(w, "Internal Server Error", 500)
+
+	for _, snippet := range snippets {
+		fmt.Fprintf(w, "%+v\n\n\n", snippet)
 	}
+
+	// Initialize a slice containing the paths to the two files. It's important // to note that the file containing our base template must be the *first* // file in the slice.
+	// files := []string{
+	// 	"./ui/html/partials/nav.tmpl.html",
+	// 	"./ui/html/base.tmpl.html",
+	// 	"./ui/html/pages/home.tmpl.html"}
+
+	// ts, err := template.ParseFiles(files...)
+	// if err != nil {
+	// 	app.serverError(w, err)
+	// 	http.Error(w, "Internal Server Error", 500)
+	// 	return
+	// }
+	// Use the ExecuteTemplate() method to write the content of the "base" // template as the response body.
+	// err = ts.ExecuteTemplate(w, "base", nil)
+	// if err != nil {
+	// 	app.serverError(w, err)
+	// 	http.Error(w, "Internal Server Error", 500)
+	// }
 }
 
 // Add a snippetView handler function.
