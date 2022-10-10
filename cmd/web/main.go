@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Danik14/simpleBack/internal/models"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 type application struct {
 	infoLog  *log.Logger
 	errorLog *log.Logger
+	snippets *models.SnippetModel
 }
 
 func main() {
@@ -52,6 +54,7 @@ func main() {
 	app := &application{
 		infoLog:  infoLog,
 		errorLog: errorLog,
+		snippets: &models.SnippetModel{DB: db},
 	}
 
 	// Initialize a new http.Server struct. We set the Addr and Handler fields so
