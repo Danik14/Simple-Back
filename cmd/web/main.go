@@ -7,15 +7,17 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"text/template"
 
 	"github.com/Danik14/simpleBack/internal/models"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 type application struct {
-	infoLog  *log.Logger
-	errorLog *log.Logger
-	snippets *models.SnippetModel
+	infoLog       *log.Logger
+	errorLog      *log.Logger
+	snippets      *models.SnippetModel
+	templateCache map[string]*template.Template
 }
 
 func main() {
@@ -51,10 +53,16 @@ func main() {
 
 	defer db.Close()
 
+	templateCache, err := newTemplateCache()
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+
 	app := &application{
-		infoLog:  infoLog,
-		errorLog: errorLog,
-		snippets: &models.SnippetModel{DB: db},
+		infoLog:       infoLog,
+		errorLog:      errorLog,
+		snippets:      &models.SnippetModel{DB: db},
+		templateCache: templateCache,
 	}
 
 	// Initialize a new http.Server struct. We set the Addr and Handler fields so

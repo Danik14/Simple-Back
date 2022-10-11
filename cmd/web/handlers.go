@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"text/template"
 
 	"github.com/Danik14/simpleBack/internal/models"
 )
@@ -25,28 +24,15 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, snippet := range snippets {
-		fmt.Fprintf(w, "%+v\n\n\n", snippet)
+	// for _, snippet := range snippets {
+	// 	fmt.Fprintf(w, "%+v\n\n\n", snippet)
+	// }
+
+	data := &templateData{
+		Snippets: snippets,
 	}
 
-	// Initialize a slice containing the paths to the two files. It's important // to note that the file containing our base template must be the *first* // file in the slice.
-	// files := []string{
-	// 	"./ui/html/partials/nav.tmpl.html",
-	// 	"./ui/html/base.tmpl.html",
-	// 	"./ui/html/pages/home.tmpl.html"}
-
-	// ts, err := template.ParseFiles(files...)
-	// if err != nil {
-	// 	app.serverError(w, err)
-	// 	http.Error(w, "Internal Server Error", 500)
-	// 	return
-	// }
-	// Use the ExecuteTemplate() method to write the content of the "base" // template as the response body.
-	// err = ts.ExecuteTemplate(w, "base", nil)
-	// if err != nil {
-	// 	app.serverError(w, err)
-	// 	http.Error(w, "Internal Server Error", 500)
-	// }
+	app.render(w, http.StatusOK, "home.tmpl.html", data)
 }
 
 // Add a snippetView handler function.
@@ -73,31 +59,11 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Initialize a slice containing the paths to the view.tmpl file,
-	// plus the base layout and navigation partial that we made earlier.
-	files := []string{
-		"./ui/html/base.tmpl.html",
-		"./ui/html/partials/nav.tmpl.html",
-		"./ui/html/pages/view.tmpl.html",
-	}
-
-	// Parse the template files...
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
-
 	data := &templateData{
 		Snippet: snippet,
 	}
 
-	err = ts.ExecuteTemplate(w, "base", data)
-	if err != nil {
-		app.serverError(w, err)
-	}
-
-	fmt.Fprintf(w, "%v", data)
+	app.render(w, http.StatusOK, "view.tmpl.html", data)
 }
 
 // Add a snippetCreate handler function.
