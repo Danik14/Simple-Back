@@ -1,9 +1,13 @@
 package models
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type Snippet struct {
@@ -15,39 +19,38 @@ type Snippet struct {
 }
 
 type SnippetModel struct {
-	DB *sql.DB
+	DB *pgx.Conn
 }
 
 func (m *SnippetModel) Insert(title string, content string, expires int) (int, error) {
-	// ? marks for placeable data
+	// $ marks for placeable data
 	statement := `INSERT INTO snippets (title, content, created, expires)
-	VALUES(?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY))`
+	VALUES($1, $2, NOW(), NOW() +  make_interval(days => $3)) RETURNING id;`
+
+	var id int
 
 	// in this case I pass title, content, expires
-	// to replace ? marks in my statement
-	result, err := m.DB.Exec(statement, title, content, expires)
+	// to replace $ marks in my statement
+	// and also scan for id, because there is no lastInsertId func
+	// in postgres, btw why if I remove scan method, it gives compile error??
+	err := m.DB.QueryRow(context.Background(), statement, title, content, expires).Scan(&id)
 	if err != nil {
+		fmt.Println(2222222)
 		return 0, err
 	}
 
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-
-	//LastInsertId return int64, so converting it to int
-	return int(id), nil
+	return id, nil
 }
 
 func (m *SnippetModel) Get(id int) (*Snippet, error) {
 	statement := `SELECT id, title, content, created, expires FROM snippets
-	WHERE expires > UTC_TIMESTAMP() AND id = ?`
+	WHERE expires > NOW() AND id = $1`
 
 	// Use the QueryRow() method on the connection pool to execute our
 	// SQL statement, passing in the untrusted id variable as the value for the
 	// placeholder parameter. This returns a pointer to a sql.Row object which
 	// holds the result from the database.
-	row := m.DB.QueryRow(statement, id)
+	row := m.DB.QueryRow(context.Background(), statement, id)
 	s := &Snippet{}
 
 	// Use row.Scan() to copy the values from each field in sql.Row to the
@@ -73,8 +76,8 @@ func (m *SnippetModel) Get(id int) (*Snippet, error) {
 
 func (m *SnippetModel) Latest() ([]*Snippet, error) {
 	statement := `SELECT id, title, content, created, expires
-	FROM snippets WHERE expires > UTC_TIMESTAMP() ORDER BY id DESC LIMIT 10`
-	rows, err := m.DB.Query(statement)
+	FROM snippets WHERE expires > NOW() ORDER BY id DESC LIMIT 10`
+	rows, err := m.DB.Query(context.Background(), statement)
 	if err != nil {
 		return nil, err
 	}
@@ -89,12 +92,17 @@ func (m *SnippetModel) Latest() ([]*Snippet, error) {
 	snippets := []*Snippet{}
 
 	// Use rows.Next to iterate through the rows in the resultset. This
-	// prepares the first (and then each subsequent) row to be acted on by the // rows.Scan() method. If iteration over all the rows completes then the // resultset automatically closes itself and frees-up the underlying
+	// prepares the first (and then each subsequent) row to be acted on by the
+	// rows.Scan() method. If iteration over all the rows completes then the
+	// resultset automatically closes itself and frees-up the underlying
 	// database connection.
 	for rows.Next() {
 		// Create a pointer to a new zeroed Snippet struct.
 		s := &Snippet{}
-		// Use rows.Scan() to copy the values from each field in the row to the // new Snippet object that we created. Again, the arguments to row.Scan() // must be pointers to the place you want to copy the data into, and the // number of arguments must be exactly the same as the number of
+		// Use rows.Scan() to copy the values from each field in the row to the
+		// new Snippet object that we created. Again, the arguments to row.Scan()
+		// must be pointers to the place you want to copy the data into, and the
+		// number of arguments must be exactly the same as the number of
 		// columns returned by your statement.
 		err = rows.Scan(&s.ID, &s.Title, &s.Content, &s.Created, &s.Expires)
 		if err != nil {
@@ -104,7 +112,8 @@ func (m *SnippetModel) Latest() ([]*Snippet, error) {
 		snippets = append(snippets, s)
 	}
 
-	// When the rows.Next() loop has finished we call rows.Err() to retrieve any // error that was encountered during the iteration. It's important to
+	// When the rows.Next() loop has finished we call rows.Err() to retrieve any
+	// error that was encountered during the iteration. It's important to
 	// call this - don't assume that a successful iteration was completed
 	// over the whole resultset.
 	if err = rows.Err(); err != nil {
@@ -112,4 +121,5 @@ func (m *SnippetModel) Latest() ([]*Snippet, error) {
 	}
 	// If everything went OK then return the Snippets slice.
 	return snippets, nil
+
 }

@@ -1,16 +1,16 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"text/template"
 
 	"github.com/Danik14/simpleBack/internal/models"
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type application struct {
@@ -26,7 +26,7 @@ func main() {
 	// and some short help text explaining what the flag controls. The value of the
 	// flag will be stored in the addr variable at runtime.
 	addr := flag.String("addr", ":4000", "HTTP network address")
-	dsn := flag.String("dsn", "web:admin@/snippetbox?parseTime=true", "MySql data source name")
+	dsn := flag.String("dsn", "postgres://web:admin@localhost:5432/snippetbox", "MySql data source name")
 
 	// Importantly, we use the flag.Parse() function to parse the command-line flag.
 	// This reads in the command-line flag value and assigns it to the addr
@@ -51,7 +51,7 @@ func main() {
 		errorLog.Fatal(err)
 	}
 
-	defer db.Close()
+	defer db.Close(context.Background())
 
 	templateCache, err := newTemplateCache()
 	if err != nil {
@@ -77,14 +77,27 @@ func main() {
 	errorLog.Fatal(err)
 }
 
-func openDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("mysql", dsn)
+func openDB(dsn string) (*pgx.Conn, error) {
+	// db, err := sql.Open("mysql", dsn)
+
+	// db, err := sql.Open("pgx", dsn)
+	// if err != nil {
+	// 	// fmt.Println(err, 1)
+	// 	return nil, err
+	// }
+	// if err = db.Ping(); err != nil {
+	// 	// fmt.Println(err, 2)
+	// 	return nil, err
+	// }
+
+	// return db, nil
+
+	db, err := pgx.Connect(context.Background(), dsn)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
-	if err = db.Ping(); err != nil {
-		fmt.Println(err)
+
+	if err = db.Ping(context.Background()); err != nil {
 		return nil, err
 	}
 
