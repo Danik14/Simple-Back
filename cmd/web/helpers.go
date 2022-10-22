@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime/debug"
 	"time"
+
+	"github.com/go-playground/form/v4"
 )
 
 // The serverError helper writes an error message and stack trace to the errorLog,
@@ -64,4 +67,38 @@ func (app *application) newTemplateData(r *http.Request) *templateData {
 	return &templateData{
 		CurrentYear: time.Now().Year(),
 	}
+}
+
+// Create a new decodePostForm() helper method. The second parameter here, dst,
+// is the target destination that we want to decode the form data into.
+func (app *application) decodePostForm(r *http.Request, dst any) error {
+	// Call ParseForm() on the request, in the same way that we did in our
+	// createSnippetPost handler.
+	// First we call r.ParseForm() which adds any data in POST request bodies
+	// to the r.PostForm map. This also works in the same way for PUT and PATCH
+	// requests. If there are any errors, we use our app.ClientError() helper to
+	// send a 400 Bad Request response to the user.
+	err := r.ParseForm()
+	if err != nil {
+		return err
+	}
+	// Call Decode() on our decoder instance, passing the target destination as
+	// the first parameter.
+	// Call the Decode() method of the form decoder, passing in the current
+	// request and *a pointer* to our snippetCreateForm struct. This will
+	// essentially fill our struct with the relevant values from the HTML form.
+	// If there is a problem, we return a 400 Bad Request response to the client.
+	err = app.formDecoder.Decode(dst, r.PostForm)
+	if err != nil {
+		// If we try to use an invalid target destination, the Decode() method
+		// will return an error with the type *form.InvalidDecoderError.We use
+		// errors.As() to check for this and raise a panic rather than returning // the error.
+		var invalidDecoderError *form.InvalidDecoderError
+		if errors.As(err, &invalidDecoderError) {
+			panic(err)
+		}
+		// For all other errors, we return them as normal.
+		return err
+	}
+	return nil
 }

@@ -102,53 +102,19 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 // must be exported in order to be read by the html/template package when
 // rendering the template.
 type snippetCreateForm struct {
-	Title   string
-	Content string
-	Expires int
-	validator.Validator
+	Title               string `form:"title"`
+	Content             string `form:"content"`
+	Expires             int    `form:"expires"`
+	validator.Validator `form:"-"`
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
+	var form snippetCreateForm
 
-	//making this handler to only allow post requests
-	// if r.Method != "POST" {
-	// 	w.Header().Set("Allowsf", http.MethodPost)
-	// 	app.clientError(w, http.StatusMethodNotAllowed)
-	// 	return
-	// }
-
-	// First we call r.ParseForm() which adds any data in POST request bodies
-	// to the r.PostForm map. This also works in the same way for PUT and PATCH
-	// requests. If there are any errors, we use our app.ClientError() helper to
-	// send a 400 Bad Request response to the user.
-	err := r.ParseForm()
+	err := app.decodePostForm(r, &form)
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
-	}
-
-	// The r.PostForm.Get() method always returns the form data as a *string*.
-	// However, we're expecting our expires value to be a number, and want to
-	// represent it in our Go code as an integer. So we need to manually covert
-	// the form data to an integer using strconv.Atoi(), and we send a 400 Bad
-	// Request response if the conversion fails.
-	expires, err := strconv.Atoi(r.PostForm.Get("expires"))
-	if err != nil {
-		app.clientError(w, http.StatusBadRequest)
-		return
-	}
-
-	// Use the r.PostForm.Get() method to retrieve the title and content
-	// from the r.PostForm map.
-	title := r.PostForm.Get("title")
-	content := r.PostForm.Get("content")
-
-	// Create an instance of the snippetCreateForm struct containing the values
-	// from the form and an empty map for any validation errors.
-	form := snippetCreateForm{
-		Title:   title,
-		Content: content,
-		Expires: expires,
 	}
 
 	// Because the Validator type is embedded by the snippetCreateForm struct,
