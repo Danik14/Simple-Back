@@ -30,7 +30,9 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	// 	fmt.Fprintf(w, "%+v\n\n\n", snippet)
 	// }
 
-	// Call the newTemplateData() helper to get a templateData struct containing // the 'default' data (which for now is just the current year), and add the // snippets slice to it.
+	// Call the newTemplateData() helper to get a templateData struct containing
+	// the 'default' data (which for now is just the current year), and add the
+	// snippets slice to it.
 	data := app.newTemplateData(r)
 	data.Snippets = snippets
 
@@ -289,5 +291,22 @@ func (app *application) userLoginPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
 }
 func (app *application) userLogoutPost(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Logout the user...")
+	// Use the RenewToken() method on the current session to change the session
+	// ID again.
+	err := app.sessionManager.RenewToken(r.Context())
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	// Remove the authenticatedUserID from the session data so that the user is
+	// 'logged out'.
+	app.sessionManager.Remove(r.Context(), "authenticatedUserID")
+
+	// Add a flash message to the session to confirm to the user that they've been
+	// logged out.
+	app.sessionManager.Put(r.Context(), "flash", "You've been logged out successfully!")
+
+	// Redirect the user to the application home page.
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
