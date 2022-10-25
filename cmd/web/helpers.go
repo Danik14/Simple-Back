@@ -60,6 +60,12 @@ func (app *application) render(w http.ResponseWriter, status int, page string, d
 
 }
 
+// Return true if the current request is from an authenticated user, otherwise
+// return false.
+func (app *application) isAuthenticated(r *http.Request) bool {
+	return app.sessionManager.Exists(r.Context(), "authenticatedUserID")
+}
+
 // Create an newTemplateData() helper, which returns a pointer to a templateData
 // struct initialized with the current year. Note that we're not using the
 // *http.Request parameter here at the moment, but we will do later in the book.
@@ -71,7 +77,8 @@ func (app *application) newTemplateData(r *http.Request) *templateData {
 		// PopString() also deletes the key and value from the session data, so it
 		// acts like a one-time fetch. If there is no matching key in the session
 		// data this will return the empty string.
-		Flash: app.sessionManager.PopString(r.Context(), "flash"),
+		Flash:           app.sessionManager.PopString(r.Context(), "flash"),
+		IsAuthenticated: app.isAuthenticated(r),
 	}
 }
 
